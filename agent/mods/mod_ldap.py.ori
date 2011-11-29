@@ -1,0 +1,438 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import ldap
+import ldap.modlist as modlist
+from datetime import date
+import hashlib
+from base64 import b64encode
+
+from gesuser.mods.ldap_settings import *
+from gesuser.datahandlers.couchdb.handler_couchdb import *
+
+class MOD_ldap(object):
+    def __init__(self):
+        self.name = "MOD_LDAP"
+        self.server = None
+        self.port = None
+        self.server_uri = "ldap://"
+        self.dn = None
+        self.passwd = None
+        self.connection = None
+        self.datahandle = None
+
+        # Connect tool to LDAP
+        self.connect(LDAP_SERVER)
+
+        # Connect with datahandler (Default: CouchDB)
+        self.datahandle = ConnectToCouch(server="winterfall.local")
+        self.datahandle.connect(TABLE_NAME)
+
+    def isActive(self):
+        result = self.stablish_connection()
+        return result
+    
+    def connect(self, server, port=None):
+        self.server = server
+        if port:
+            self.port = port
+            self.server_uri = self.server_uri + server + ":" + port
+        else:
+            self.server_uri = self.server_uri + server
+        self.connection = ldap.initialize(self.server_uri)
+
+    def stablish_connection(self):
+        try:
+            self.connection.simple_bind_s()
+            return True
+        except ldap.LDAPError, e:
+            print e
+            return False
+
+    def create_user(self, data):
+        print 'Create user'
+        # Bind/authenticate with a user with apropriate rights to add objects
+        self.connection.simple_bind_s("cn=admin,dc=winterfall,dc=local","gepet0")
+
+        # The dn of our new entry/object
+        dn="uid=%s,ou=People,dc=winterfall,dc=local" % data['user']['uid']
+
+        # A dict to help build the "body" of the object
+        attrs = {}
+
+        # Field for assign objectClass to Ldap entry
+        attrs['objectClass'] = OBJECTCLASS_LIST
+
+        attrs['uid'] = data['user']['uid']
+        attrs['sn'] = data['user']['uid']
+        attrs['gecos'] = data['user']['gecos']
+        attrs['cn'] = data['user']['gecos']
+
+        # Field for assign user uidNumber
+        next_uidnumber = self._check_uidnumber_presence()
+        attrs['uidNumber'] = str(next_uidnumber + 1)
+
+        # Field for group type
+        # Default value for group
+        attrs['gidNumber'] = data['user']['group']
+        if data['user']['group'] == PROFILE_TYPE_TEACHER:
+            attrs['gidNumber'] = TEACHER_PROFILE_NUMBER
+        elif data['user']['group'] == PROFILE_TYPE_PUPIL:
+            attrs['gidNumber'] = PUPIL_PROFILE_NUMBER
+        elif data['user']['group'] == PROFILE_TYPE_MANAGEMENT:
+            attrs['gidNumber'] = MANAGEMENT_PROFILE_NUMBER
+
+        # Field for course
+        attrs['roomNumber'] = data['user']['course']
+
+        # Field for assign login shell
+        attrs['loginShell'] = SHELL
+
+        # Fields related with user password
+        password_sha = hashlib.sha1(data['user']['pwd']).digest()
+        password = "{SHA}" + b64encode(password_sha)
+        attrs['userPassword'] = password
+        attrs['shadowMax'] = SHADOW_MAX
+        attrs['shadowWarning'] = SHADOW_WARNING
+
+        # Field for profile type (fixed or mobile)
+        # Default value for profile
+        attrs['homeDirectory'] = HOME_DIR % data['user']['uid']
+        if data['user']['profile'] == PROFILE_TYPE_FIXED:
+            attrs['homeDirectory'] = HOME_DIR % data['user']['uid']
+        elif data['user']['profile'] == PROFILE_TYPE_MOBILE:
+            attrs['homeDirectory'] = HOME_DIR_MOBILE % data['user']['uid']
+
+        # Field for quotas
+        attrs['homePostalAddress'] = data['user']['quota']
+
+        # Convert our dict to nice syntax for the add-function using modlist-module
+        ldif = modlist.addModlist(attrs)
+
+        # Do the actual synchronous add-operation to the ldapserver
+        try:
+            self.connection.add_s(dn,ldif)
+            # Write with datahanlder (CouchDB by default)
+            user_data_dict = {'_id':data['user']['uid'],'group':attrs['gidNumber'],'date':str(date.today())}
+            self.datahandle.createDocument(user_data_dict)
+            return {'error':'', 'desc':'ok'}
+        except Exception as e:
+            error_dict = {}
+            error_dict['error'] = "501"
+            error_dict['desc'] = e[0]['desc']
+            return error_dict
+
+        # Its nice to the server to disconnect and free resources when done
+        #self.connection.unbind_s()
+    
+    def read_user(self, data):
+        print 'Read user'
+        searchFilter = ""
+        cont_parentheses = 0
+        fields_dict = self.extract_field_operator(data['user'])
+        for f in FIELDS_LIST:
+            print f
+            try:
+                sf = None
+                cont_parentheses += 1
+                op = fields_dict[f]
+                print op
+                if op == "gt":
+                    operator = ">"
+                elif op == "lt":
+                    operator = "<"
+                elif op == "eq":
+                    operator = "="
+                elif op == "ge":
+                    operator = ">="
+                elif op == "le":
+                    operator = "<="
+                elif op == "ap":
+                    operator = "~="
+
+                if f == "group":
+                    if data['user']['group'] == PROFILE_TYPE_PUPIL:
+                        data['user']['group'] = PUPIL_PROFILE_NUMBER
+                    elif data['user']['group'] == PROFILE_TYPE_MANAGEMENT:
+                        data['user']['group'] = MANAGEMENT_PROFILE_NUMBER
+                    elif data['user']['group'] == PROFILE_TYPE_TEACHER:
+                        data['user']['group'] = TEACHER_PROFILE_NUMBER
+
+                # searchFilter Example: "(&(uid=*i*)(&(homePostalAddress=250)))"
+                # searchFilter Example: "(&(!(homeDirectory~=nfs)))"
+                if cont_parentheses > 1:
+                    if f == "uid" or f == "gecos":
+                        sf = "(&(%s%s%s%s%s))" % (FIELDS_DICT[f],operator,"*",data['user'][f],"*")
+                    else:
+                        if f == "profile":
+                            if data['user']['profile'] == PROFILE_TYPE_FIXED:
+                                sf = "(&(!(%s%s%s)))" % (FIELDS_DICT[f],operator,"nfs")
+                            else:
+                                sf = "(&(%s%s%s))" % (FIELDS_DICT[f],operator,"nfs")
+                        else:
+                            if f == "group":
+                                sf = "(&(%s%s%s))" % (FIELDS_DICT[f],operator,data['user'][f])
+                else:
+                    if f == "uid" or f == "gecos":
+                        sf = "&(%s%s%s%s%s)" % (FIELDS_DICT[f],operator,"*",data['user'][f],"*")
+                    else:
+                        if f == "profile":
+                            if data['user']['profile'] == PROFILE_TYPE_FIXED:
+                                sf = "!(%s%s%s)" % (FIELDS_DICT[f],operator,"nfs")
+                            else:
+                                sf = "&(%s%s%s)" % (FIELDS_DICT[f],operator,"nfs")
+                        else:
+                            if f == "group":
+                                sf = "&(%s%s%s)" % (FIELDS_DICT[f],operator,data['user'][f])
+
+                searchFilter = searchFilter + sf
+                print searchFilter
+            except:
+                print f + " Exclude"
+
+        if searchFilter:
+            searchFilter = "(" + searchFilter + ")"
+
+        print searchFilter
+
+        # The next lines will also need to be changed to support your search requirements and directory
+        baseDN = "ou=People, dc=winterfall, dc=local"
+        searchScope = ldap.SCOPE_SUBTREE
+        # Retrieve all attributes
+        retrieveAttributes = None
+        users = []
+
+        try:
+            ldap_result_id = self.connection.search(baseDN, searchScope, searchFilter, retrieveAttributes)
+            result_set = []
+            while 1:
+                result_type, result_data = self.connection.result(ldap_result_id, 0)
+                if (result_data == []):
+                    break
+                else:
+                    if result_type == ldap.RES_SEARCH_ENTRY:
+                        result_set.append(result_data)
+            print result_set
+            for result in result_set:
+                dict = {'uid':result[0][1]['uid'][0],
+                        'group':result[0][1]['gidNumber'][0],
+                        'gecos':result[0][1]['gecos'][0],
+                        'course':result[0][1]['roomNumber'][0],
+                        'profile':result[0][1]['homeDirectory'][0],
+                        'quota':result[0][1]['homePostalAddress'][0]
+                        }
+                users.append(dict)
+
+        except ldap.LDAPError, e:
+            print e
+
+        #print users
+        search_result = self._apply_search_filter(data, users, fields_dict)
+        
+        return search_result
+
+    # Used to extract the operator of field (used in read method)
+    def extract_field_operator(self, data):
+        fields_dict = {}
+        for field in FIELDS_LIST:
+            try:
+                element = data.findall('{%s}%s' % ("cga:gesuser3:user", field))
+                fields_dict[field] = element[0].attrib['op']
+            except:
+                pass
+        return fields_dict
+
+    def update_user(self, data):
+        print 'Update user test'
+        # Bind/authenticate with a user with apropriate rights to add objects
+        self.connection.simple_bind_s("cn=admin,dc=winterfall,dc=local","gepet0")
+        
+        user_dict = self._data_philter(data)
+        # Form example: data = ['lammoth',{fields_to_change}]
+        data = [user_dict['uid'], user_dict]
+        user_dn = 'uid=%s,ou=People,dc=winterfall,dc=local' % data[0]
+        fields = []
+        # Check fields to change
+        # To change gecos field
+        try:
+            list_gecos = ['gecos',data[1]['gecos']]
+            fields.append(list_gecos)
+            list_cn = ['cn',data[1]['gecos']]
+            fields.append(list_cn)
+        except:
+            print("Error while changing gecos")
+
+        # To change password field
+        try:
+            password_sha = hashlib.sha1(data[1]['pwd']).digest()
+            password = "{SHA}" + b64encode(password_sha)
+            list_password = ['userPassword',password]
+            fields.append(list_password)
+        except:
+            print("Error while changing password")
+
+        # To change quota field
+        try:
+            list_quota = ['homePostalAddress',data[1]['quota']]
+            fields.append(list_quota)
+        except:
+            print("Error while changing quota")
+
+        # To change course field
+        try:
+            list_course = ['roomNumber',data[1]['course']]
+            fields.append(list_course)
+        except:
+            print("Error while changing course")
+
+        # To change profile field
+        try:
+            if data[1]['profile'] == PROFILE_TYPE_FIXED:
+                data[1]['profile'] = HOME_DIR % data[1]['uid']
+            elif data[1]['profile'] == PROFILE_TYPE_MOBILE:
+                data[1]['profile'] = HOME_DIR_MOBILE % data[1]['uid']
+
+            list_profile = ['homeDirectory',data[1]['profile']]
+            fields.append(list_profile)
+        except:
+            print("Error while changing profile")
+
+        # To change group field
+        try:
+            if data[1]['group'] == PROFILE_TYPE_PUPIL:
+                data[1]['group'] = PUPIL_PROFILE_NUMBER
+            elif data[1]['group'] == PROFILE_TYPE_MANAGEMENT:
+                data[1]['group'] = MANAGEMENT_PROFILE_NUMBER
+            elif data[1]['group'] == PROFILE_TYPE_TEACHER:
+                data[1]['group'] = TEACHER_PROFILE_NUMBER
+                
+            list_group = ['gidNumber',data[1]['group']]
+            fields.append(list_group)
+        except:
+            print("Error while changing group")
+
+        # Through this loop, creates a list with the fields to change
+        mod_attrs = []
+        for f in fields:
+            t = (ldap.MOD_REPLACE,f[0],f[1])
+            mod_attrs.append(t)
+        
+        self.connection.modify_s(user_dn, mod_attrs)
+
+    def delete_user(self, uid):
+        print 'Delete user test'
+        del_result = self.connection.delete('uid=%s,ou=People,dc=winterfall,dc=local' % uid)
+        self.connection.result(del_result)
+        
+    def _check_uidnumber_presence(self):
+        print 'Check uidNumber field'
+        baseDN = "ou=People, dc=winterfall, dc=local"
+        searchScope = ldap.SCOPE_SUBTREE
+        retrieveAttributes = ['uidNumber']
+        searchFilter = "uid=*"
+
+        try:
+            ldap_result_id = self.connection.search(baseDN, searchScope, searchFilter, retrieveAttributes)
+            result_set = 0
+            while 1:
+                result_type, result_data = self.connection.result(ldap_result_id, 0)
+                if (result_data == []):
+                    break
+                else:
+                    if result_type == ldap.RES_SEARCH_ENTRY:
+                        if result_set < int(result_data[0][1]['uidNumber'][0]):
+                            result_set = int(result_data[0][1]['uidNumber'][0])
+            return result_set
+        except ldap.LDAPError, e:
+            print e
+
+    def _data_philter(self, data):
+        dict = {'uid':data['user']['uid'],
+                'pwd':data['user']['pwd'],
+                'gecos':data['user']['gecos'],
+                'quota':data['user']['quota'],
+                'course':data['user']['course'],
+                'profile':data['user']['profile'],
+                'group':data['user']['group'],
+               }
+        return dict
+
+    def _apply_search_filter(self, data, search, operators):
+#        print "*"*80
+#        print data
+#        print "*"*80
+#        print search
+#        print "*"*80
+#        print operators
+        #for f in ['quota','course']:
+        # Filter for fields: quota and course
+        list_profile = []
+        try:
+            if data['user']['profile'] == "2":
+                for d in search:
+                    if d['profile'].index("nfs"):
+                        list_profile.append(d)
+            else:
+                for d in search:
+                    if not d['profile'].index("nfs"):
+                        list_profile.append(d)
+        except:
+            pass
+
+        list_quota = []
+        try:
+            op = operators['quota']
+            for d in list_profile:
+#                print d
+                if self._compare_operator(op, data['user']['quota'], d['quota']):
+                    list_quota.append(d)
+        except:
+            pass
+
+#        print list_quota
+
+        list_course = []
+        try:
+            op = operators['course']
+            for d in list_quota:
+                if self._compare_operator(op, data['user']['course'], d['course']):
+                    list_course.append(d)
+        except:
+            pass
+
+#        print list_course
+
+        if list_course:
+#            print "*"*80
+#            print list_course
+            return list_course
+        elif list_quota:
+#            print list_quota
+            return list_quota
+        elif list_profile:
+            return list_profile
+        else:
+            return search
+
+    def _compare_operator(self, op, data_source, data_target):
+#        print op,data_target,data_source
+        if op == "gt":
+            if data_target > data_source:
+                return True
+        elif op == "lt":
+            if data_target < data_source:
+                return True
+        elif op == "eq":
+            if data_target == data_source:
+                return True
+        elif op == "ge":
+            if data_target >= data_source:
+                return True
+        elif op == "le":
+            if data_target <= data_source:
+                return True
+        else:
+            return False
+    
+if __name__=="__main__":
+    l = MOD_ldap()

@@ -1,0 +1,41 @@
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svn/gesuser3/!svn/ver/28/trunk/src/web/js/strophejs-1.0.2/examples/attach
+END
+manage.py
+K 25
+svn:wc:ra_dav:version-url
+V 84
+/svn/gesuser3/!svn/ver/28/trunk/src/web/js/strophejs-1.0.2/examples/attach/manage.py
+END
+boshclient.py
+K 25
+svn:wc:ra_dav:version-url
+V 88
+/svn/gesuser3/!svn/ver/28/trunk/src/web/js/strophejs-1.0.2/examples/attach/boshclient.py
+END
+__init__.py
+K 25
+svn:wc:ra_dav:version-url
+V 86
+/svn/gesuser3/!svn/ver/28/trunk/src/web/js/strophejs-1.0.2/examples/attach/__init__.py
+END
+settings.py
+K 25
+svn:wc:ra_dav:version-url
+V 86
+/svn/gesuser3/!svn/ver/28/trunk/src/web/js/strophejs-1.0.2/examples/attach/settings.py
+END
+urls.py
+K 25
+svn:wc:ra_dav:version-url
+V 82
+/svn/gesuser3/!svn/ver/28/trunk/src/web/js/strophejs-1.0.2/examples/attach/urls.py
+END
+README
+K 25
+svn:wc:ra_dav:version-url
+V 81
+/svn/gesuser3/!svn/ver/28/trunk/src/web/js/strophejs-1.0.2/examples/attach/README
+END

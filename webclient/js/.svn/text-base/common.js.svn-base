@@ -1,0 +1,945 @@
+jQuery.fn.reset = function () {
+  $(this).each (function() {this.reset();});
+}
+
+/**
+ *	Este archivo engloba las operaciones más comunes e independientes de las clases específicas:
+ *		1- Clase Fechas: operaciones de fechas y horas
+ *		2- Clase GUI: operaciones a nivel de interfaz
+ *		3- Manejadores de los eventos más comunes, como son los "click" y los "submit" de los formularios
+ */
+
+var GUI = {
+	//constantes: elementos de la interfaz
+	content: '#center_section',
+	submenu: '#left_section',
+	main_frm: '#main_frm',
+	login_frm: '#login_frm',
+	section_title: '#section_tit',
+	main_menu: '#left_sec_main',
+	global_menu: '#main_sections',
+	users_table: '#users',
+    events_list: '#right_section',
+    edit_user_frm: '#edit_user_form',
+    last_data_search: null,
+    batch_user_file: null,
+    response_batch_users: [],
+    last_msg_date: null,
+    last_msg: null,
+    iq_list_id: [],
+    no_users_add_batch: 0,
+    no_users_error_batch: 0,
+    total_entries_batch_users: 0,
+    no_delete_users: 0,
+    options_bubble: {
+            selectable: false,
+            position : 'bottom',
+            align	 : 'center',
+            innerHtml: _translate('Module inactive'),
+            innerHtmlStyle: {
+                                color:'#FFFFFF',
+                                'text-align':'center'
+                            },
+            tail: {
+                    align:'center',
+                    hidden: false
+                  },
+            themeName: 	'all-black',
+            themePath: 	'img/jquerybubblepopup-theme'
+    },
+    actual_module: null,
+
+	set_main_frm: function(titulo, html){
+        $('#start').hide();
+        $(this.section_title).html(titulo);
+        $(this.main_frm).html(html);
+		/*if(titulo!='Inicio'){
+            $('#start').hide();
+            $(this.section_title).html(titulo);
+            $(this.main_frm).html(html);
+        } else {
+            $(this.section_title).html(titulo);
+        }*/
+	},
+
+	set_sub_menu: function(html){
+		$(this.submenu).html(html);
+	},
+
+	/**
+	 *	Muestra el Growl y añade el mensaje a los eventos
+	 *	El mensaje ha de venir sin traducir
+	 */
+
+	msg: function(status, msg){
+        var now = new Date();
+        var seconds = now.getSeconds();
+        //console.log(seconds);
+
+        if (msg != GUI.last_msg) {
+            GUI.show_msg(status, msg);
+            GUI.last_msg = msg;
+        } else {
+            if (!GUI.last_msg_date) {
+                GUI.show_msg(status, msg);
+                GUI.last_msg_date = seconds;
+                GUI.last_msg = msg;
+            } else {
+                if (seconds > GUI.last_msg_date + 10 || seconds < GUI.last_msg_date) {
+                    GUI.show_msg(status, msg);
+                    GUI.last_msg_date = seconds;
+                    GUI.last_msg = msg;
+                }
+            }
+        }
+	},
+    show_msg: function(status, msg){
+        if(status != ''){
+            msg = _translate(msg);
+
+            $.Growl.show(msg, {icon: status});
+            var texto = _translate(status);
+
+            var fecha = new Fechas();
+            $('#events').prepend('<li><span class="time">'+fecha.get_Date()+'<br /></span><span class="event_'+status+'">'+texto+'</span><span>'+msg+'</span></li>')
+
+            if($('#events li').length > 5){
+                $('#events li:last-child').remove();
+                $('#events li:last-child').css({'border': '0'});
+            } else {
+                $('#events li:last-child').css({'border': '0'});
+            }
+        }
+    },
+	module_on: function(module){
+		this.msg('completed',_translate('module activated')+': '+_translate(module));
+		$('#module-'+module).removeClass('inactive').addClass('active');
+        if ($('#module-'+module).HasBubblePopup()) {
+            $('#module-'+module).RemoveBubblePopup();
+        }
+	},
+	module_off: function(module){
+		this.msg('error',_translate('module deactivated')+': '+_translate(module));
+		$('#module-'+module).removeClass('active').removeClass('selected').addClass('inactive');
+        if (!$('#module-'+module).HasBubblePopup()) {
+            $('#module-'+module).CreateBubblePopup(GUI.options_bubble);
+        }
+        console.log("actual:" + GUI.actual_module);
+        console.log("disabled:" + ("module-" + module));
+        if (GUI.actual_module == ("module-" + module)){
+            GUI.welcome();
+        }
+	},
+	modules_off: function(){
+		$(GUI.main_menu+' li.active').removeClass('active').addClass('inactive');
+		$(GUI.main_menu+' li.selected').removeClass('selected').addClass('inactive');
+		GUI.msg('completed',_translate('modules deactivated'));
+	},
+	loading: function(msg){
+		$('#content_center_section div').hide();
+		$('#loading-text').html(msg);
+		$('#loading').show();
+	},
+	unloading: function(){
+		$('#content_center_section div').show();
+		$('#loading').hide();
+	},
+	welcome: function(){
+        $('#header_center_section').removeClass('head_center_section_login').addClass('head_center_section_normal');
+		$.get('php/home/welcome.php',{user: XMPP.user}, function(data){
+            GUI.actual_module = "module-home";
+			//$('#start').html(data);
+            $('#start').html('');
+			$('#start').show();
+			$.get('common/menu.php', function(data){
+				$('#header').html(data);
+                // When login in the system, section "home" is selected
+                $('#module-home').removeClass('inactive').addClass('selected');
+                $('li.inactive').CreateBubblePopup(GUI.options_bubble);
+			});
+			$('#user_name').html(XMPP.user);
+            $(GUI.events_list).show();
+            Common.show_welcome_menu();
+		});
+	},
+	go_login: function(){
+        $(".ui-dialog-content").dialog("close");
+        $(GUI.section_title).html(function() {
+            return 'Bienvenido a g3suser';
+        });
+		$.get('php/common/login_form.php', function(data){
+            $('#header_center_section').removeClass('head_center_section_normal').addClass('head_center_section_login');
+            $(GUI.events_list).hide();
+			$('#start').html(data);
+			$('#start').show();			
+			$('#header').html('');
+			//$('#right_section').html('');
+			$(GUI.main_frm).html('');
+			$(GUI.submenu).html('');
+		});
+	},
+	set_error_form: function(id, msg){
+		$('#'+id).parent().parent().find('span.error').html(msg);
+	},
+	clean_error_form: function(id){
+		GUI.set_error_form(id, '');
+	},
+	/**
+	 *	Recibe un conjunto de datos obtenidos a partir del item de un iq, el conjunto de datos es de la siguiente forma:
+	 *	{uid: uid, gecos: gecos, quota: quota, course: course, group: group, profile: profile, pair: pair}
+	 */
+	print_user_result: function(data){
+        GUI.last_data_search = data;
+        if (!data.error) {
+            $('#remove_selected_items').fadeIn('slow');
+            $.each(jQuery(':input[type=checkbox]:input[name=check_all]', $('#users')), function(){
+                $(this).attr('disabled', false);
+            });
+        } else {
+            $('#remove_selected_items').fadeOut('fast');
+            $.each(jQuery(':input[type=checkbox]:input[name=check_all]', $('#users')), function(){
+                $(this).attr('disabled', true);
+            });
+        }
+		$.post('php/user/_get_user.php', data, function(data){
+            XMPPDebug.log(data);
+            var jsonData = $.parseJSON(data);
+            if(jsonData.error){
+                GUI.msg('error', jsonData.error);
+                //XMPPDebug.log('error');
+            } else {
+                XMPPDebug.log(jsonData.user_html);
+                $(GUI.users_table+' tbody').fadeOut('fast', function () {
+                    $(GUI.users_table+' tbody').remove();
+                    $(GUI.users_table+' tbody').fadeIn('fast');
+                    $(GUI.users_table).append(jsonData.user_html);
+                });
+                //$(jsonData.user_html).appendTo('#users');
+            }
+        });
+	}
+}
+
+/**
+ *	Operaciones comunes de fecha y hora
+ */
+var Fechas = function(){
+	this.days = new Array("Domingo", "Lunes", "Martes", "Miércoles", "Jueves",
+ "Viernes", "Sabado");
+
+	Fechas.prototype.get_Date = function(){
+		var now = new Date();
+		return this.days[now.getDay()]+" "+now.getDate()+", "+now.getHours()+":"+now.getMinutes();
+	}
+}
+
+var Global = {
+	id_usuario: null
+}
+
+var Common = {
+    stanza_sended : null,
+
+	logout: function(){
+		$(document).trigger('disconnect');
+	},
+	session_renove: function(){
+		$.post('php/session/session.php',
+			{action:'renove'},
+			function(data){				
+			}
+		);
+	},
+	validate_form: function(jq_form){
+
+		var errors = false;
+		$.each(jQuery(':input:not(input[type=button])',jq_form), function(){
+			var error_elem = false;
+			if($(this).attr('required')){ 
+				if(!$(this).val()){
+					errors = true;
+					error_elem = true;
+					GUI.set_error_form($(this).attr('id'), _translate('field required'));
+				}else{
+					GUI.clean_error_form($(this).attr('id'));
+				}
+			}
+			if($(this).attr('integer') && !error_elem){
+				if(isNaN($(this).val())){
+					errors = true;
+					GUI.set_error_form($(this).attr('id'),_translate('this value must be integer'));
+				}else{
+					GUI.clean_error_form($(this).attr('id'));
+				}
+			}
+            if($(this).attr('filtered') && !error_elem){
+                var filter = /[^A-Za-z0-9]/;
+                if(filter.test($(this).val())){
+					errors = true;
+					GUI.set_error_form($(this).attr('id'),_translate('this value is not allowed'));
+				}else{
+					GUI.clean_error_form($(this).attr('id'));
+				}
+			}
+            if($(this).attr('lessfiltered') && !error_elem){
+                var filter = /[^A-Za-z0-9.º ]/;
+                if(filter.test($(this).val())){
+					errors = true;
+					GUI.set_error_form($(this).attr('id'),_translate('this value is not allowed'));
+				}else{
+					GUI.clean_error_form($(this).attr('id'));
+				}
+			}
+		});
+
+		//comprobación de elemenos password
+		var pass_anterior = null;
+		$.each(jQuery(':input[type=password]', jq_form), function(){
+			if(pass_anterior == null){
+				pass_anterior = $(this).val();
+			}
+			else{
+				if($(this).val() != pass_anterior){
+					errors = true;
+					GUI.set_error_form($(this).attr('id'),_translate('password doesn\'t match'));
+				}else{
+					GUI.clean_error_form($(this).attr('id'));
+				}
+			}
+		});
+
+		return errors;
+	},
+	/**
+	 *	Creación de usuario.
+	 *	Manda los campos del formulario al objeto xmpp para que cree la stanza de creación de usuario
+	 */
+	create_user: function(){
+        //var prueba = $('#fileupload').fileinput("getValue");
+        /*$.ajaxFileUpload({
+				url:'php/common/doajaxfileupload.php',
+				secureuri:false,
+				fileElementId:'fileupload',
+				dataType: 'json',
+				success: function (data, status)
+				{
+					if(typeof(data.error) != 'undefined')
+					{
+						if(data.error != '')
+						{
+							alert(data.error);
+						}else
+						{
+							alert(data.msg);
+						}
+					}
+				},
+				error: function (data, status, e)
+				{
+					alert(e);
+				}
+			}
+		);*/
+
+        if (!GUI.batch_user_file) {
+            //console.log(pruebas);
+            if(!Common.validate_form($(GUI.main_frm))){
+                var fields = $(GUI.main_frm).serializeArray();
+                var pass__position;
+
+                //el campo pass ha de ir codificado en sha1
+                $.each(fields, function (i, field){
+                    if(field.name == 'pwd'){
+                        field.value = '{SHA}'+hex_sha1(field.value);
+                    }
+                    else if(field.name == 'pwd2'){
+                        field.value = hex_sha1(field.value);
+                        pass__position = i;
+                    }
+                });
+
+                //eliminamos el elemento "pass_"
+                if(pass__position){
+                    fields.splice(pass__position,1);
+                }
+
+                console.log(fields);
+                XMPP.send_iq(fields, {etq:'user', type:'set', action:'create'});
+                Common.session_renove();
+            }
+		} else {
+            Common.create_batch_users();
+        }
+	},
+    create_batch_users: function (){
+        //XMPPDebug.log(GUI.response_batch_users);
+        //var prueba = new Array();
+        GUI.iq_list_id = [];
+        GUI.total_entries_batch_users = GUI.response_batch_users.length;
+        GUI.no_users_add_batch = 0;
+        GUI.no_users_error_batch = 0;
+        $('#batch_users_log').slideDown("fast");
+        $('#no_add_batch_users').html('0/'+GUI.total_entries_batch_users);
+        $('#no_del_batch_users').html('0');
+        $.each(GUI.response_batch_users, function() {
+            if (this.length > 5) {
+                //console.log(this[0]);
+                //XMPPDebug.log(this);
+                // Create the users
+                if (this[2] == "a") {
+                    this[2] = "1";
+                } else if (this[2] == "g") {
+                    this[2] = "2";
+                } else if (this[2] == "p") {
+                    this[2] = "3";
+                }
+                var batch_user = new Array(/*{name:"item", value:new Array(*/
+                                                                {name:"uid",value:this[0]},
+                                                                {name:"pwd",value:'{SHA}' + hex_sha1(this[0])},
+                                                                {name:"gecos",value:this[1]},
+                                                                {name:"group",value:this[2]},
+                                                                {name:"profile",value:this[3]},
+                                                                {name:"course",value:this[4]},
+                                                                {name:"quota",value:this[5]}
+                                                            /*)
+                                           }*/
+                                       );
+                //prueba.push(batch_user);
+                /*$.each(batch_user, function(i, field) {
+                    console.log(field.name + ":" + field.value);
+                });*/
+                //XMPPDebug.log(batch_user);
+                //console.log(batch_user);
+                var id = XMPP.send_iq(batch_user, {etq:'user', type:'set', action:'create'});
+                GUI.iq_list_id.push({id:id,type:'user:create',result:'', iq:{uid:this[0]}});
+                //console.log(identificador);
+                //setTimeout(function(){}, 4000);
+            }
+        });
+        //var a = new Array({name:"item",value:prueba});
+        //XMPP.send_batch_iq(a, {etq:'user', type:'set', action:'create'});
+        //GUI.batch_user_file = null
+        Common.restablish_user_fileupload();
+    },
+    update_log_system: function(id) {
+        var total_batch_add_users = 0;
+        var total_batch_error_users = 0;
+        $.each(GUI.iq_list_id, function() {
+            if (this.type == 'user:create') {
+                if (this.result == 'result') {
+                    total_batch_add_users += 1;
+                } else if (this.result == 'error'){
+                    total_batch_error_users += 1;
+                }
+            }
+        });
+
+        if (total_batch_add_users > 0) {
+            if (total_batch_add_users >= GUI.no_users_add_batch) {
+                GUI.no_users_add_batch = total_batch_add_users;
+                 $('#no_add_batch_users').html(GUI.no_users_add_batch+'/'+GUI.total_entries_batch_users);
+                 $.each(GUI.iq_list_id, function() {
+                     if (this.type == 'user:create' && this.result == 'result' && this.id == id){
+                        $('#batch_users_new_names').append('<a><span>'+this.iq.uid+' </span></a>');
+                     }
+                 });
+            }
+        } else {
+            $('#no_add_batch_users').html('0/'+GUI.total_entries_batch_users);
+           
+        }
+
+        if (total_batch_error_users > 0) {
+            if (total_batch_error_users >= GUI.no_users_error_batch) {
+                GUI.no_users_error_batch = total_batch_error_users;
+                $('#no_error_batch_users').html(GUI.no_users_error_batch);
+                $.each(GUI.iq_list_id, function() {
+                     if (this.type == 'user:create' && this.result == 'error' && this.id == id){
+                        $('#batch_users_error_names').append('<a><span>'+this.iq.uid+' </span></a>');
+                     }
+                });
+            }
+        } else {
+            $('#no_error_batch_users').html('0');
+            
+        }
+    },
+    restablish_user_fileupload: function(){
+        $("#delete_users_file").hide();
+        GUI.batch_user_file = null;
+        GUI.response_batch_users = [];
+        $('#file_uploader').attr('disabled', false);
+        $('#file_uploader').parent().show();
+        $('#file_uploader').parent().parent().find('li').each(function(){
+            $(this).remove();
+        });
+        $('#batch_users_new_names').find('a').each(function(){
+            $(this).remove();
+        });
+        $('#batch_users_error_names').find('a').each(function(){
+            $(this).remove();
+        });
+    },
+    
+    edit_user: function(){
+		if(!Common.validate_form($(GUI.edit_user_frm))){
+			var fields = $(GUI.edit_user_frm).serializeArray();
+			var pass__position;
+
+			//el campo pass ha de ir codificado en sha1
+			$.each(fields, function (i, field){
+				if(field.name == 'pwd' && field.value){
+					field.value = '{SHA}'+hex_sha1(field.value);
+				}
+				else if(field.name == 'pwd2' && field.value){
+					field.value = hex_sha1(field.value);
+					pass__position = i;
+				}
+			});
+
+			//eliminamos el elemento "pass_"
+			if(pass__position){
+				fields.splice(pass__position,1);
+			}
+
+			XMPP.send_iq(fields, {etq:'user', type:'set', action:'update'});
+			Common.session_renove();
+            return true;
+		} else {
+            return false;
+        }
+	},
+	/**
+	 *	Este caso es una mierda muy particular: para crear el array que se le pasa a la función XMPP.send_iq de manera
+	 *	dinámica hay que sobrecargar mucho el html.
+	 *
+	 *	El array "fields" debe estar compuesto de objectos con los siguientes atributos:
+	 *		- name
+	 *		- value
+	 *		- op
+	 *
+	 *	Para crearlo recorremos los <tr class="searching"> y buscamos dentro de ellos los elementos con class name, value y op, respectivamente.
+	 */
+	search_users: function(){
+		$("#check_all").attr('checked', false);
+        var fields = [];
+
+		$.each(jQuery('tr.searching', GUI.main_frm), function(){
+			var object = new Object();
+			
+			object.name = $(this).find('.name').val();
+			object.value = $(this).find('.value').val();
+			object.op = $(this).find('.op').val();
+
+			if (object.value) {
+				fields.push(object);
+            } else {
+                XMPPDebug.log(object.name);
+                if (!object.value && (object.name == 'gecos' || object.name == 'uid')) {
+                    object.value = '*';
+                    fields.push(object);
+                }
+            }
+		});
+
+        Common.stanza_sended = fields;
+		XMPP.send_iq(fields, {etq:'user', type:'get', action:'read'});
+		Common.session_renove();
+	},
+
+    search_last_users: function(){
+		var fields = Common.stanza_sended;
+		XMPP.send_iq(fields, {etq:'user', type:'get', action:'read'});
+		Common.session_renove();
+	},
+
+    check_all_items: function(){
+        if ($('#check_all').attr('checked')) {
+            $.each(jQuery(':input[type=checkbox]:input[name=element_sel]',$('#users')), function(){
+                $(this).attr('checked', true);
+            });
+        } else {
+            $.each(jQuery(':input[type=checkbox]:input[name=element_sel]',$('#users')), function(){
+                $(this).attr('checked', false);
+            });
+        }
+     },
+
+	/**
+	 *	Eliminación de un usuario (una vez confirmado)
+	 *	Crea el array de campos que recibe la función encargada del envío de la <iq> con el formato deseado
+	 */
+	delete_user: function(uid){
+		var fields = [];
+		var field = new Object();
+		field.name = 'uid';
+		field.value = uid;
+		fields.push(field);
+
+        $('#remove_selected_items img').show();
+        GUI.no_delete_users += 1;
+        console.log(GUI.no_delete_users);
+        
+		XMPP.send_iq(fields, {etq:'user', type:'set', action:'delete'});
+		Common.session_renove();
+	},
+
+    remove_check_items: function(){
+        var user = "los usuarios seleccionados";
+        $.get('php/user/_del_user.php',{user: user}, function(data){
+			$('#del_dialog').html(data).dialog({height: 120,
+                                                title: 'Eliminar usuario',
+                                                resizable: false,
+                                                modal: true,
+                                                buttons: {
+                                                    "Cancelar": function() {$(this).dialog("close");},
+                                                    "Eliminar": function() {
+                                                        $.each(jQuery(':input[type=checkbox]:input[name=element_sel]',$('#users')), function(){
+                                                            if ($(this).attr('checked')) {
+                                                                var user_uid = new Array();
+                                                                user_uid = ($(this).parent().attr('id')).split("-");
+                                                                //XMPPDebug.log(user_uid[1]);
+                                                                Common.delete_user(user_uid[1]);
+                                                            }
+                                                        });
+                                                        Common.search_last_users();
+                                                        $("#check_all").attr('checked', false);
+                                                        $(this).dialog("close");
+                                                    }
+                                                }
+            });
+		});
+    },
+    update_loading: function() {
+        console.log(GUI.no_delete_users);
+        if (GUI.no_delete_users == 0) {
+            $('#remove_selected_items img').hide();
+        }
+    },
+	get_section_active: function(){
+		return $('li.section_active a').attr('module')+'-'+$('li.section_active a').attr('href');
+	},
+
+    show_welcome_menu: function(){
+        var obj = $(this);
+		var url = 'php/home/submenu.php';
+
+        $.get(url, function(data){
+            GUI.set_sub_menu(data);
+
+            //reestablecemos las clases css
+            //$(GUI.main_menu+' li.selected').removeClass('selected').addClass('active');
+            //obj.parent().removeClass('active').addClass('selected');
+
+            $(GUI.submenu).show();
+            $(GUI.submenu+' li.section_active a').click();
+            Common.session_renove();
+        });
+    },
+    create_user_bubble_info: function(obj){
+        $(obj).CreateBubblePopup({
+                selectable: false,
+                position : 'right',
+                align	 : 'center',
+                innerHtml: $(obj).attr('title'),
+                innerHtmlStyle: {
+                                    color:'#FFFFFF',
+                                    'text-align':'center'
+                                },
+                tail: {
+                        align:'center',
+                        hidden: false
+                      },
+                themeName: 	'all-azure',
+                themePath: 	'img/jquerybubblepopup-theme'
+        });
+        console.log('polla boba');
+    }
+}
+
+/**
+ *	Manejadores de eventos más comunes
+ */
+$(document).ready(function(){
+	$.post('php/session/session.php',
+			{action:'check'},
+			function(data){
+				var jsonData = jQuery.parseJSON(data);
+
+				if(jsonData.exists){
+					$(document).trigger('connect', {user: jsonData.user, password: jsonData.pass});
+				}
+			}
+	);
+
+	/**
+	 *	Cargar elementos que no forman parte de ningún módulo específico (como la configuración)
+	 *	Estos elementos forman parte de la cabecera (#header), son <a> con class=simple_load:
+	 *		--> <a class="simple_load" href="script">
+	 *
+	 *	El título del elemento a cargar se encuentra en el <span> que se encuntra dentro, y el script
+	 *	que se ha de cargar se encuentra en
+	 *	'php/common/[HREF]'
+	 *
+	 *	Una vez cargado el elemento por AJAX se estable en el contenido principal
+	 */
+	$('#header').delegate('a.simple_load','click',function(event){
+		event.preventDefault();
+		var titulo = $(this).find('span').html();
+		var url = 'php/common/'+$(this).attr('href')+'.php';
+
+		$.get(url, function(data){
+			//no hay submenú, por lo que limpiamos esa zona
+			$(GUI.submenu).html('');
+
+			GUI.set_main_frm(titulo, data);
+			Common.session_renove();
+		});
+	});
+
+    $('#header').delegate('a.important_link','click',function(event){
+		event.preventDefault();
+		Common.logout();
+	});
+
+	/**
+	 * Cargar módulo al hacer click en el elemento del menú (no inactivo)
+	 *
+	 * El elemento href del <a> contiene el nombre del script del menú a cargar mediante AJAX.
+	 * Ej: href="users" => php/menus/users.php	 
+	 *
+	 * Por último realizamos operaciones de interfaz y cargamos el primer elemento del menú
+	 */
+	$('#header').delegate('a.main_menu', 'click', function(event){
+		event.preventDefault();
+       
+		// Continuamos si el módulo no está inactivo y seleccionado
+		if(!$(this).parent().hasClass('inactive') || $(this).parent().hasClass('selected')){
+            GUI.actual_module = "module-" + $(this).attr('href');
+			var obj = $(this);
+			var url = 'php/'+$(this).attr('href')+'/submenu.php';
+
+			$.get(url, function(data){
+				GUI.set_sub_menu(data);
+				
+				//reestablecemos las clases css
+				$(GUI.main_menu+' li.selected').removeClass('selected').addClass('active');
+				obj.parent().removeClass('active').addClass('selected');
+
+				$(GUI.submenu).show();
+				$(GUI.submenu+' li.section_active a').click();
+				Common.session_renove();
+			});
+		}
+	});
+
+	/**
+	 *	Cargar submódulo al hacer click en un elemento del submenú
+	 *		--> <li><a class="click" module="modulo" href="script">
+	 *	La url a cargar se encuentra en 'php/ATRIBUTO_MODULE/ATRIBUTO_HREF.php'
+	 */
+	$(GUI.submenu).delegate('li a', 'click', function (event){
+		event.preventDefault();
+		var obj = $(this);
+		var titulo = $(this).find('span').html();
+		var modulo = $(this).attr('module');
+		var script = $(this).attr('href')+'.php';
+		var url = 'php/'+modulo+'/'+script;
+
+		$.get(url, {user: XMPP.user}, function(data){
+			GUI.set_main_frm(titulo, data);
+            //XMPPDebug.log(script);
+            if (script == 'create.php') {
+                //$("#fileupload").fileinput();
+                var uploader = new qq.FileUploader({
+                    element: document.getElementById('file-uploader-users'),
+                    action: 'php/common/php.php',
+                    debug: true,
+                    multiple: false,
+                    allowedExtensions: ['txt'],
+                    onComplete: function(id, file, response) {
+                        //XMPPDebug.log(file);
+                        GUI.batch_user_file = file;
+                        $('#file_uploader').attr('disabled', true);
+                        $('#file_uploader').parent().hide();
+                        $('#delete_users_file').show();
+                        //var jsonData = $.parseJSON(response);
+                        GUI.response_batch_users = response.elements;
+                        /*$.each(response.elements, function() {
+                            if (this.length > 5) {
+                                XMPPDebug.log(this);
+                            }
+                        });*/
+                    }
+                });
+                Common.create_user_bubble_info('.user_img_quota');
+                Common.create_user_bubble_info('.user_img_course');
+                Common.create_user_bubble_info('.user_img_profile');
+            }
+			//reestablecemos las clases css
+			$(GUI.submenu+' li.section_active').removeClass('section_active');
+			obj.parent().addClass('section_active');
+			Common.session_renove();
+		});		
+	});
+
+	/**
+	 * Submit del formulario principal
+	 * A partir de los elementos del formulario crea la stanza a enviar al servidor xmpp
+	 */
+	$(GUI.main_frm).submit(function(event){
+		event.preventDefault();
+
+		var submit = $(this).find('input[type=submit]');
+		var fields = $(this).serializeArray();
+
+		var etq = submit.attr('etq');
+		var type = submit.attr('stanza_type');
+		var action = submit.attr('action');
+
+		XMPP.send_iq(fields, {etq:etq, type:type, action:action});
+		Common.session_renove();
+	});
+
+	/**
+     * Formulario de login
+     * Llama por AJAX al archivo de login que mira las credenciales del usuario y crea la sesión php
+     * Si todo va bien modifica la variable global ID_USUARIO utilizada en la aplicación y va al inicio de la aplicación
+     */
+    $('#start').delegate(GUI.login_frm,'submit',function(event){
+		event.preventDefault();
+        var user = $('#user').val();
+
+		//TODO: activar sha1
+        //var pass = hex_sha1($('#pass').val());
+		var pass = $('#pass').val();
+
+		$(document).trigger('connect', {user: user, password: pass});
+    });
+
+	/**
+	 *	Eliminación de usuarios. En el click se pedirá confirmación, y en caso afirmativo se procederá a la eliminación del user
+	 *	<a class="action del" href="" uid="UID_USER">...</a>
+	 */
+	$(GUI.main_frm).delegate('a.action.del','click', function(event){
+		event.preventDefault();
+        var user = $(this).attr('uid');
+        $.get('php/user/_del_user.php',{user: user}, function(data){
+			$('#del_dialog').html(data).dialog({height: 120,
+                                                title: 'Eliminar usuario',
+                                                resizable: false,
+                                                modal: true,
+                                                buttons: {
+                                                    "Cancelar": function() {$(this).dialog("close");},
+                                                    "Eliminar": function() {Common.delete_user(user);Common.search_last_users();$(this).dialog("close");}
+                                                    }
+                                                });
+		});
+		//if(confirm('Confirmar borrado')){
+		//	Common.delete_user($(this).attr('uid'));
+		//}
+	});
+
+    /**
+	 *	Eliminación de usuarios. En el click se pedirá confirmación, y en caso afirmativo se procederá a la eliminación del user
+	 *	<a class="action del" href="" uid="UID_USER">...</a>
+	 */
+	$(GUI.main_frm).delegate('a.action.edit','click', function(event){
+		event.preventDefault();
+        var user = null;
+        var user_uid = $(this).attr('uid');
+        var keys = Object.keys(GUI.last_data_search.data);
+        var values = []
+        for(var i = 0; i < keys.length; i++) {
+            var key = keys[i];
+            values[i] = GUI.last_data_search.data[key];
+            if (user_uid == values[i].uid) {
+                user = values[i];
+            }   
+        }
+
+        if (user.profile == 'Fijo') {
+            user.profile = 1;
+        } else {
+            user.profile = 2;
+        }
+
+        if (user.group == 'A') {
+            user.group = 1;
+        } else {
+            if (user.group == 'G') {
+                user.group = 2;
+            } else {
+                user.group = 3;
+            }
+        }
+        //console.log(user);
+        $.post('php/user/_edit_user.php',{user: user}, function(data){
+			$('#edit_dialog').html(data).dialog({width: 500,
+                                                height: 560,
+                                                title: 'Actualizar usuario',
+                                                resizable: false,
+                                                modal: true,
+                                                buttons: {
+                                                    "Cancelar": function() {$(this).dialog("close");},
+                                                    "Actualizar": function() {
+                                                                    if (Common.edit_user()){
+                                                                        Common.search_last_users();
+                                                                        $(this).dialog("close");
+                                                                    }
+                                                                  }
+                                                }
+                                            });
+            Common.create_user_bubble_info('.user_img_quota_edit');
+            Common.create_user_bubble_info('.user_img_course_edit');
+            Common.create_user_bubble_info('.user_img_profile_edit');
+            // Insert user information
+            /*$.each(jQuery(':input:not(input[type=button])',$(GUI.edit_user_frm)), function(){
+                if ($(this).attr('name') == 'uid') {                    
+                    $(this).val(user.uid);
+                    console.log(user.uid);
+                }
+                if ($(this).attr('name') == 'gecos') {
+                    $(this).val(user.gecos);
+                }
+                if ($(this).attr('name') == 'quota') {
+                    $(this).val(user.quota);
+                }
+                if ($(this).attr('name') == 'course') {
+                    $(this).val(user.course);
+                }
+                if ($(this).attr('name') == 'profile') {
+                    if (user.profile == 'Fijo') {
+                        $(this).val(1);
+                    } else {
+                        $(this).val(2);
+                    }
+                }
+                if ($(this).attr('name') == 'group') {
+                    if (user.group == 'A') {
+                        $(this).val(1);
+                    } else {
+                        if (user.group == 'G') {
+                            $(this).val(2);
+                        } else {
+                            $(this).val(3);
+                        }
+                    }
+                }
+            });*/
+        });
+    });
+
+    /**
+     * Hace un toogle sobre el div donde se muestran las estadísticas
+     */
+
+    /*$('#statistics_resume').delegate('a', 'click', function (event){
+        event.preventDefault();
+        $('#disk_space_chart').slideToggle("slow");
+        $('#disk_space_chart').show();
+    });*/
+
+	//TODO: eliminar esto
+	//GUI.module_on('user');
+});

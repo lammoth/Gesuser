@@ -1,0 +1,25 @@
+root {
+    display: block;
+}
+
+body {
+    background-color: #ddd;
+    font-family: 'Lucida Grande', 'Lucida Sans Unicode', Verdana, sans-serif;
+	margin:0;
+}
+
+.clear {
+    clear: both;
+}
+
+.wrap {
+	margin: 0 auto;
+}
+
+input{
+	color: #666;
+}
+
+.hidden{
+	display:none;
+}

@@ -1,0 +1,109 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import sleekxmpp
+from sleekxmpp.xmlstream.stanzabase import ElementBase, ET, JID
+from sleekxmpp.stanza.iq import Iq
+from sleekxmpp.basexmpp import *
+
+from gesuser.common.customstanzahandler import *
+
+class UserActions(object):
+    def _handle_user_iq(self, stanza, parent):
+        # User skill instance
+        stanza_data = User(stanza.xml)
+        # Extracts action field and runs pertinent actions
+        query_result = stanza_data.get_user_data()
+        # Custom IQ skill instance
+        iqClass = IqCustomMessage()
+        # Elements to compose the answer
+        stanza_id = stanza.xml.attrib['id']
+        stanza_to = stanza.xml.attrib['from']
+        stanza_from = stanza.xml.attrib['to']
+        # Making the answer
+        result = iqClass.create_result_iq(parent, query_result, id_stanza=stanza_id)
+        iqClass.send_custom_iq(stanza_from, stanza_to, result)
+
+    def register_user(self, uid, passwd, from_jid, to_jid):
+        parent = self
+        iqClass = IqCustomMessage()
+        data = iqClass.set_user_data(uid, passwd)
+        stanza = iqClass.create_custom_iq(self, "set", "user", "cga:gesuser3:user", "create", data)
+        result = iqClass.send_custom_iq(from_jid, to_jid, iq=stanza)
+
+    def send_iq(self):
+        print 'Sending user register iq'
+        self.register_user("1000", "pepito", "autobot@ubuntu.local/ClientXMPP", "fjhidalgo@ubuntu.local/ClientXMPP")
+
+ 
+ 
+# Class to get user data
+class UserData(ElementBase):
+    namespace = 'cga:gesuser3:user'
+    name = 'user'
+    plugin_attrib = 'user'
+    #interfaces = set(('action', 'uid', 'pwd', 'gecos', 'type', 'quota', 'course', 'group', 'role'))
+    #interfaces = set(('action', 'uid', 'pwd', 'gecos', 'etc'))
+    interfaces = set(('action',))
+    #sub_interfaces = set(('uid', 'pwd', 'gecos', 'type', 'quota', 'course', 'group', 'role'))
+    #sub_interfaces = interfaces
+
+#    def getUid(self):
+#        present = self.xml.find('{%s}uid' % UserData.namespace)
+#        return present
+
+# Class to process user data
+class User(ElementBase):
+    namespace = 'cga:gesuser3:user'
+    name = 'iq'
+    plugin_attrib = 'iq'
+    interfaces = set(('user'))
+    sub_interfaces = interfaces
+
+    # Gets user data and returns a dict with them
+    def get_user_data(self):
+        data = {}
+        print self.keys
+        p = self.xml.find('{%s}user' % User.namespace)
+        user = UserData(p)
+        #user.getUid()
+        print user['action']
+        #print user['uid']
+
+        if user['action']:
+            data['action'] = user['action']
+            if data['action'] == "create":
+                #for d in UserData.interfaces:
+                #    data[d] = user[d]
+                result = self._create_user_data("hola")
+                return result
+            elif data['action'] == "update":
+                for d in UserData.interfaces:
+                    data[d] = user[d]
+                result = self._update_user_data(data)
+                return result
+            elif data['action'] == "delete":
+                uid = user['uid']
+                result = self._remove_user_data(uid)
+                return result
+            elif data['action'] == "read":
+                result = self._read_user_data(user)
+                return result
+        else:
+            pass
+
+    def _create_user_data(self, data):
+        dict = {"code":"","msg":""}
+        return dict
+
+    def _update_user_data(self, data):
+        dict = {"code":"","msg":""}
+        return dict
+
+    def _remove_user_data(self, data):
+        dict = {"code":"","msg":""}
+        return dict
+
+    def _read_user_data(self, data):
+        dict = {"code":"","msg":""}
+        return dict
