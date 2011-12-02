@@ -24,6 +24,7 @@ var GUI = {
     last_msg_date: null,
     last_msg: null,
     iq_list_id: [],
+    actual_module: null,
     
     
     options_bubble: {
@@ -291,25 +292,6 @@ var Common = {
             Common.session_renove();
         });
     }
-    /*create_user_bubble_info: function(obj){
-        $(obj).CreateBubblePopup({
-                selectable: false,
-                position : 'right',
-                align	 : 'center',
-                innerHtml: $(obj).attr('title'),
-                innerHtmlStyle: {
-                                    color:'#FFFFFF',
-                                    'text-align':'center'
-                                },
-                tail: {
-                        align:'center',
-                        hidden: false
-                      },
-                themeName: 	'all-azure',
-                themePath: 	'img/jquerybubblepopup-theme'
-        });
-        console.log('polla boba');
-    }*/
 }
 
 /**
@@ -342,6 +324,8 @@ $(document).ready(function(){
 		event.preventDefault();
 		var titulo = $(this).find('span').html();
 		var url = 'php/common/'+$(this).attr('href')+'.php';
+        $('#' + GUI.actual_module).removeClass('selected').addClass('active');
+
 
 		$.get(url, function(data){
 			//no hay submenú, por lo que limpiamos esa zona
