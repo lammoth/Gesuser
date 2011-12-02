@@ -1,4 +1,19 @@
-Gesuser is an application that allow you to manage system information (users, services, task, etc) in an easier and simple way
+Gesuser is an application that allow you to manage system information (users, services, task, etc) in an easier and simple way.
+
+Gesuser uses the following software:
+- Ejabberd
+- SleekXMPP
+- JQuery
+- OpenLDAP
+- MySQL
+- CouchDB
+
+Gesuser uses the following programming languages:
+- Python
+- PHP
+- Javascript
+
+
 
                                                   
                  .sawawaaawa,                     
