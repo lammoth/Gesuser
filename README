@@ -1,53 +1,66 @@
 Gesuser is an application that allow you to manage system information (users, services, task, etc) in an easier and simple way
 
-QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ
-QQQQQQQQQQQQQ@"----"--"?4QQQQQQQQQQQQQQ
-QQQQQQQQQQQP"            "4QQQQQQQQQQQQ
-QQQQQQQQQW(                 "$QQQQQQQQQ
-QQQQQQQQP'                   +QQQQQQQQQ
-QQQQQQQC                      ]WQQQQQQQ
-QQQQQQQ.                       $QQQQQQQ
-QQQQQQ[                        -QQQQQQQ
-QQQQ@^                          3QQQQQQ
-QQQW(         .samQw            )QQQQQQ
-QQQk        .aQWWQQQma           WWQQQQ
-QQQf      _amQQQQQQQQW           ]QQQQQ
-QQQk   _yQQQQQQQQQQQQQ           ]QQQQQ
-QQQm, .QQQQQQQQQQQQQQQ           =QQQQQ
-QQQQL.jWQQQWBVQQQQQQQQg.         .QQQQQ
-QQQQQ.jQD$W1mWQQQQQQQQQm.      _a,QQQQQ
-QQQQm Q5mgwW"-"$QQQQQQQQL     ]$q24QQQQ
-QQQQ@ m@!]G[      "$QQQQQ;   _ZmQWXQQQQ
-QQQQQ;W' Jpmyw/.   _YQWQQf  _mQQQQ%QQQQ
-QQQQQh' <mGQQQQQQQmaSQWQQk  yQPVQVkQQQQ
-QQQQQ[ :QQWQQQ@1?TVsVdQQQk_<QQkQQzkQQQQ
-QQQQ@  jwd6WCQk_aaddwQQQQQQQQQ$QQ1EQQQQ
-QQQQQ jW??<3gQWWWYyQWQQQQQQQQQfQWvEQQQQ
-QQQQQLW'<wadQQQwwWQQQQQQQQQQQQfDQWhQQQQ
-QQQQQm5jWPe3QQQQWQQQQQQQQQQQQQgmQWjQQQQ
-QQQQQQfawZ2mQQQQQQQQQQQQQQQQQQQQQ6QQQQQ
-QQQQQQLQW5EQQQ@VmVQWQQQQQQQQQQWV!jQQQQQ
-QQQQQQXQEQ5QQQQWjWdWWQQQQQQQQQfQ'jQQQQQ
-QQQQQQjQSE3QQPTPyQQ2QQW$WQQQQQfQ`QQQQQQ
-QQQQQWmQdk2QFmQQQQQQJWWjQQQQQQfW QQQQQQ
-QQQQQQ3QZQgQQQQWVVHWmkWmWQQQQQL2.QQQQQQ
-QQQQQQEQSQQWVqw?'   4XW#QQQQQQQc:QQQQQQ
-QQQQQQQ3FQE%T^_jydn+I3WAQQQQQQW(jQQQQQQ
-QQQQQQQkm$) aqQT"   ]pWjQQQQQQWcQQQQQQQ
-QQQQQQQQdpC,)"`  __jdEkQQQQQQQQvQQQQQQQ
-QQQQQQQQm4p2, _c7nm6WEkQQQQQQQWnWWQQQQQ
-QQQQQQQQQm$w3wwym@5QW63QQQQQQQ6QdQQQQQQ
-QQQQQQQQQQp66dSqwmQWW3mQQQQQQEmWmQQQQQQ
-QQQQQQQQQQWJdQQWWQQQ5kQQQQQQ@dQQ}QQQQQQ
-QQQQQQQQQQQk#QQQQQQQQmQQQQQQ5QQQmWWQQQQ
-QQQQQQQQQQQm$QQQQQQQWQQQQQQQmQQQQ3QQQQQ
-QQQQQQQQQQQQ3QQQQQQQ5QQQQQQQQQQQQ24QQQQ
-QQQQQQQQQQQQZQQQQQQ5QWQQQQQQQQQQQkhQQQQ
-QQQQQQQQQQQQQ7$Q@VqWWQQQQQQQQQWQQW]2QQQ
-QQQQQQQQQQQQWLhcyWWQQQQQQQQQQQQQQW/Qw$Q
-QQQQQQQQQQQQDm2QJQQQQQQQQQQQWQQQQQkQQgZ
-QQQQQQQQQQQQ4QmQWQQQQQQQQQQQQQQQQQEQQQm
-QQQQQQQQQQQEmQQJQQQQQQQQQQQQQQQQQQkQQQQ
-QQQQQQQQQQQQWQQQWQQQQQQQQQWQQQQQQQEQQQQ
-QQQQQQQQQQQWQQQQQQQQQQQQWQQQQQQQQQqQQQQ
-QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ
+                                                  
+                 .sawawaaawa,                     
+                _mQWQWQWWWWQQQQw.                 
+             _wmQQQQQQQQQQQQQQQQQa,,              
+            _mWQQQQQQQQQQQQQQQQQWQQQa             
+          .aQQQQQQQQQQQQQQQQQQQQQQQQQc            
+         .wQQWQQQQQQQQQQQQQQQQQQQQQQQQc           
+        .wQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ.          
+        +QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQc          
+        $WQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ,         
+      _mWQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQm         
+     _QQQQQQQQQQQQQQQD??9QQQQQQQQQQQQQQQQ.        
+    _dQQQQQQQQQQQW?"`    4WQQQQQQQQQQQQQWL        
+    )QQQQQQQQQWQP`        -?QQQQQQQQQQQQQQ        
+    ]WQQQQQQQWT'            QQQQWQQQWQQQWQ;       
+    )WQQQQT""`              QQQQQQQQQQQQQQ[       
+    )WQQQ(                  QQQQQQQQQQQQQQL       
+     4WQf                   QQQQQQQQQQQQQQm       
+     )dQ'      ._.          -$QQQQQQQQQQQQ#       
+      ]@   _  <z`            -$QQQQQQQWWUU#       
+      jD _/`s/^.ss,           -QQQQQQQ@'__),      
+      4f_^ _...mQQma,_,        ]WQQQQW[/--<c      
+      df-_w@.(jQQWQQQQQmc       QWQQQP_'  -v      
+      ][.mQE,( """$QQQQQWs,     jQQQP -    3.     
+       \mQW'<=     ""^~?B'/     ]QQ@   ,   ].     
+       mQW( --     ..   _%:     ]WQ(  :!` 1<.     
+      ]QQm,     . _nygw/\%"     -??   =   {]      
+      mWQ(-"<< :( )@?"":l+`           |   %]      
+      4Q' ._=z( ' -   <`              =. _1]      
+      )F <QBBL(   -||+`               :;_--]      
+       ;<W(  ;(                       :%'  /      
+       )r[ _|1(                       -`  :'      
+        n+"`)<`                           /       
+        3~ _')     _ <,                 _j(       
+        r  % >    -^\ ",              :!^Q(       
+       )` :':`      )  +;             ::=Q`       
+       )  = J.  .a__(   -;   ;        :;]@        
+       )  ) (=  r        ),  (        :;jk        
+       )  -,"!            (= <        =[jf        
+        ( :'     _>|{uowa.=) ]        -(df        
+        < =   _/!-_yWQ$$Bm=) ]         ;W[        
+        -;:; %(_wZ9((=.=Lk() )         ;Z         
+         { (:{QDt:..ajQQQQ~{ (         ;(         
+          (+,3Qz:<amQQQQ@Y ).`         ;c         
+          =,=/%QWQQQ@9<2'( )=          (>         
+           <.<|)QWY3<%" /  =)          ;|         
+            \ \(-""^- _/`  (>         )`<         
+             (:/=_===>^   :<'        _' )         
+             -;( --.      /)        .>  =.        
+              <)         ) (        /.  -t        
+              .>.                  ='    ]        
+               ;                   +     -;       
+              .;         .;               \,      
+               \         %                )<.     
+               +,      .%                 );\     
+                ">.  _="                   L-;    
+                 q~n"~                     X.-\   
+                <-( \.                     )[  \, 
+               _' <  ^                      [   +,
+               /  =,                        [    <
+              .;   \                       :'    -
+              -    -'                      )      
+                                           )      
+                                           -
